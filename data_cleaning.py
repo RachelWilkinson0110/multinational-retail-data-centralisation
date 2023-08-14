@@ -12,11 +12,11 @@ class DataCleaning:
 
     def clean_user_data(self,table):
         #Formatting the dates correctly
-        table=self.date_format(table=table, column_name="join_date")
-        table=self.date_format(table=table, column_name="date_of_birth")
-        table=self.cleaning_email(table=table,column_name='email_address')
+        table=self.date_format_2(table=table, column_name="date_of_birth")
+        table=self.date_format_2(table=table, column_name="join_date")
+        table=self.clean_email(table=table)
         #Removing any null values
-        table=table.dropna(axis='index', how='any',inplace=True)
+        #table=table.dropna(axis='index', how='any',inplace=True)
         return table
 
     """Part 2: Cleaning the card data """
@@ -24,21 +24,21 @@ class DataCleaning:
         #Ensuring that the card numbers only contain digits
         table['card_number'].apply(self.isDigit)
         #Formatting the date
-        table=self.date_format(table=table, column_name="date_payment_confirmed")
+        table=self.date_format_2(table=table, column_name="date_payment_confirmed")
         table=table.dropna(axis='index', how='any',inplace=True)
         return table
 
     """Part 3: Cleaning the store data """
-    def clean_store_data(self,table):
-        #Removing the "lat" column as it only contains 11 non null entries
-        table=table.drop(columns="lat", index="1")
-        #Ensuring the opening data of the stores is formatted correctly
-        table=self.date_format(table=table, column_name="opening_date")
-        #table=table[table["staff_numbers"].str.isdigit()]
-        #table.dropna(axis='index', how='any',inplace=True)
-        print("Store data cleaned successfully")
+    
+    def cleaning_store_data(self, table):
+        table=self.date_format(table=table, column_name="opening_date")                    
+        table['staff_numbers'] =  pd.to_numeric( table['staff_numbers'].apply(self.remove_char_from_string),errors='coerce', downcast="integer") 
+        table.dropna(subset = ['staff_numbers'],how='any',inplace= True)
         return table
 
+    def remove_char_from_string(self,value):
+        return re.sub(r'\D', '',value) 
+    
     """Part 4: Cleaning the product data"""
     def convert_product_weights(self,table):
         table["weight"]=table["weight"].apply(self.convert_to_kg)
@@ -48,8 +48,6 @@ class DataCleaning:
     def clean_products_data(self,table):
         #Ensuring the date the product was added is formatted correctly
         table=self.date_format(table=table, column_name="date_added")
-        #Removing rows with null entries
-        #table=table.dropna(axis='index', how='any', inplace=True)
         return table
     
     """Part 5: Cleaning the orders table"""
@@ -59,41 +57,33 @@ class DataCleaning:
     
     """Part 6: Cleaning event date table"""
     def clean_date_time(self,table):
-        table['month'] =  pd.to_numeric( table['month'],errors='coerce', downcast="integer")
-        table['year'] =  pd.to_numeric( table['year'], errors='coerce', downcast="integer")
-        table['day'] =  pd.to_numeric( table['day'], errors='coerce', downcast="integer")
+        table['month'] =  pd.to_numeric( table['month'],errors='ignore', downcast="integer")
+        table['year'] =  pd.to_numeric( table['year'], errors='ignore', downcast="integer")
+        table['day'] =  pd.to_numeric( table['day'], errors='ignore', downcast="integer")
         table.dropna(how='any',inplace= True)      
         return table
 
         """Index of functions used to clean the data"""
-
-    def cleaning_name(self, table, column_name):
-        for i, column_name in enumerate(table[column_name]):
-            char_regex=re.compile(r"/^[A-Za-z]+$/")
-            if not re.match(char_regex, column_name):
-                table.loc[i,column_name]=np.nan  
     
-    def cleaning_email(self, table, column_name):
-        for i, column_name in enumerate(table[column_name]):
-            email_regex=re.compile(r"[^@]+@[^@]+\.[^@]+")
-            if not re.match(email_regex, column_name):
-                table.loc[i,column_name]=np.nan
-
+    def clean_email(self, table):
+        if '@' in table["email_address"]:
+            return table["email_address"]
+        else: 
+            return np.nan
+    
     def date_format(self, table, column_name):
+        table[column_name] = pd.to_datetime(table[column_name], errors='ignore')
+        table.dropna(axis=0, how='any',inplace= True)
+        return table
+    
+    def date_format_2(self, table, column_name):
         table[column_name] = pd.to_datetime(table[column_name], format='%Y-%m-%d', errors='ignore')
         table[column_name] = pd.to_datetime(table[column_name], format='%Y %B %d', errors='ignore')
         table[column_name] = pd.to_datetime(table[column_name], format='%B %Y %d', errors='ignore')
         table[column_name] = pd.to_datetime(table[column_name], errors='coerce')
         table.dropna(subset = column_name,how='any',inplace= True)
         return table
-    
-    def validating_country_code(self,table,column_name):
-        mappings={
-                  "United Kingdon":"GB", 
-                  "Germany":"DE", 
-                  "United States":"US"
-                  }
-        table[column_name]=table["country"].replace(mappings)
+
 
     def removing_string(self, s):
         return re.sub(r'\d+', '', s)
@@ -106,6 +96,10 @@ class DataCleaning:
             return w
        elif w.endswith("g"):
             w=w.replace("g", " ")
+            w=self.perform_calc(w)
+            return (float(w))/1000 if self.isfloat(w) else np.nan
+       elif w.endswith("g ."):
+            w=w.replace("g .", " ")
             w=self.perform_calc(w)
             return (float(w))/1000 if self.isfloat(w) else np.nan
        elif w.endswith("ml"):
@@ -141,12 +135,15 @@ class DataCleaning:
             return True
         except:
             return False
-    
+        
     def isDigit(self, num):
         if str(num).isdigit() == True:
             return str(num)
         else:
             return np.nan
+    
+    
+
 
 
     
