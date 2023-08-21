@@ -14,9 +14,6 @@ class DataCleaning:
         #Formatting the dates correctly
         table=self.date_format_2(table=table, column_name="date_of_birth")
         table=self.date_format_2(table=table, column_name="join_date")
-        table=self.clean_email(table=table)
-        #Removing any null values
-        #table=table.dropna(axis='index', how='any',inplace=True)
         return table
 
     """Part 2: Cleaning the card data """
@@ -31,7 +28,7 @@ class DataCleaning:
     """Part 3: Cleaning the store data """
     
     def cleaning_store_data(self, table):
-        table=self.date_format(table=table, column_name="opening_date")                    
+        table=self.date_format_2(table=table, column_name="opening_date")                    
         table['staff_numbers'] =  pd.to_numeric( table['staff_numbers'].apply(self.remove_char_from_string),errors='coerce', downcast="integer") 
         table.dropna(subset = ['staff_numbers'],how='any',inplace= True)
         return table
@@ -47,12 +44,13 @@ class DataCleaning:
        
     def clean_products_data(self,table):
         #Ensuring the date the product was added is formatted correctly
-        table=self.date_format(table=table, column_name="date_added")
+        table=self.date_format_2(table=table, column_name="date_added")
         return table
     
     """Part 5: Cleaning the orders table"""
     def clean_orders_table(self, table):
         table.drop(["first_name", "last_name", "1"], axis=1)
+        table["card_number"]=table["card_number"].apply(self.isDigit)
         return table
     
     """Part 6: Cleaning event date table"""
@@ -65,16 +63,6 @@ class DataCleaning:
 
         """Index of functions used to clean the data"""
     
-    def clean_email(self, table):
-        if '@' in table["email_address"]:
-            return table["email_address"]
-        else: 
-            return np.nan
-    
-    def date_format(self, table, column_name):
-        table[column_name] = pd.to_datetime(table[column_name], errors='ignore')
-        table.dropna(axis=0, how='any',inplace= True)
-        return table
     
     def date_format_2(self, table, column_name):
         table[column_name] = pd.to_datetime(table[column_name], format='%Y-%m-%d', errors='ignore')

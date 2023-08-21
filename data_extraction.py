@@ -59,6 +59,7 @@ class DataExtractor:
         url_API_lists="https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/number_stores"
         response=requests.get(url_API_lists, headers=self.API_key())
         #print('Response status code:', response.status_code)
+        print (response.json()['number_stores'])
         return response.json()['number_stores']
         
     def retrieve_store_data(self):
@@ -114,4 +115,4 @@ class DataExtractor:
  
 
 test=DataExtractor()
-test.extract_json_from_s3_by_link()
+test.list_number_of_stores()
